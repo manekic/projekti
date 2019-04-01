@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <title></title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.2/jquery.js"></script>
+    <style media="screen">
+    tr,td {border: 1px solid green;}
+    td { width: 35px; height: 50px; border-collapse: separate; font-size: 30px;}
+    </style>
+  </head>
+  <body>
+    Duljina zamišljenog niza (length): <input type="text" id="duljina"><br />
+    Koliko raličitih slova se smije pojaviti (nLetters): <input type="text" id="razlSlova"><br />
+    <button type="button" id="btn">Nova igra!</button><br /><br />
+    <div id="elti"></div>
+    <div id="rjesenje"></div>
+    <p id="novaIgra"></p>
+    <script>
+    //u zadatku pise da su oba parametra < 10 pa zato imam niz od 10 slova i 10 boja (za svako slovo)
+    var slova = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"];
+    var boje = ["plum", "green", "blue", "purple", "pink", "yellow", "orange", "red", "brown", "indigo"];
+    var duljina = null, brRazlSlova = null, id = null, attempt = null;
+    //broj slova iz poslanog pokusaja koja se nalaze u nizu na ispravnom mjestu
+    var dobraSlova = null;
+    //broj slova iz poslanog pokusaja koja se nalaze u nizu koji je server zamislio, ali na krivom mjestu
+    var krivaSlova = null;
+    //zastavica za kraj igre => ako je postavljena, onda se vise ne mogu mijenjati slova na klik celije
+    var zastavica = 0;
+    //spremam slova u celijama
+    var celije = [];
+      $(document).ready(function()
+      {
+        $("#btn").on("click", Posalji);
+        $("body").on("click", "td.celijaP", Slova);
+        $("body").on("click", "button.btnP", Pokusaj);
+      });
+
+      function Posalji()
+      {
+        celije = [];
+        zastavica = 0;
+        dobraSlova = null;
+        krivaSlova = null;
+        $("#novaIgra").html("");
+        $("#elti").html("");
+        duljina = Number($("#duljina").val());
+        brRazlSlova = Number($("#razlSlova").val());
+        console.log("Duljina je " + duljina);
+        console.log("Razlicitih slova ima " + brRazlSlova);
+        //ajaxom saljem duljinu i broj razlicitih slova
+        $.ajax(
+          {
+              url: "http://rp2.studenti.math.hr/~zbujanov/dz4/getId.php",
+              data:
+              {
+                length: duljina,
+                nLetters: brRazlSlova
+              },
+              dataType: "json",
+              success: function(data)
+              {
+                id = data.id;
+                console.log("Rijec je " + id);
+              },
+              error: function(data)
+              {
+                if(status != null)
+                  console.log("Nešto nije u redu s Ajax upitom " + status + ".");
+              }
+          });
+          crtajIgru();
+      }
+
+      function crtajIgru()
+      {
+        console.log("u fji crtajIgru => Crtam tablicu.");
+        var tbl = $("<table></table>");
+        var tr = $("<tr></tr>");
+        for(var i = 0; i < duljina; i++)
+        {
+          var td = $("<td></td>");
+          td.prop("class", "celijaP").prop("id", i).html("A").prop("align", "center").css("background-color", boje[0]);
+          tr.append(td);
+          celije[i] = "A";
+          console.log("Sadrzaj celije " + i + " jest " + celije[i]);
+        }
+        tbl.append(tr);
+        $("#rjesenje").html(tbl).css("float", "left");
+        var btn = $("<button></button>");
+        btn.html("Pokušaj!").css("float", "left").prop("class", "btnP");
+        $("#novaIgra").append(" ").append(btn);
+
+        console.log("Nacrtao sam tablicu.");
+      }
+
+      function Slova()
+      {
+        console.log("U fji Slova sam.");
+        var celija = Number($(this).prop("id"));
+        console.log("Kliknuo na celiju broj " + (celija+1));
+        var slovo = $(this).html();
+        //u petlji idem do brRazlSlova te mijenjam trenutno slovo u sljedece
+        //ako se trenutno nalazimo na zadnjem mogucem slovu, onda pisem prvo slovo umjesto njega
+        //u petlju ulazim samo ako nije kraj igre
+        //u moguca razlicita slova brojim i slovo A => ako je brRazlSlova = 3, onda se mogu pojaviti A, B ili C
+        if(zastavica === 0)
+        {
+          for(var i = 0; i < brRazlSlova; i++)
+          {
+            if(slova[i] === slovo)
+            {
+              if((i+1) === brRazlSlova)
+              {
+                $(this).html(slova[0]).css("background-color", boje[0]);
+                celije[celija] = slova[0];
+                console.log("Sadrzaj celije " + celija + " jest " + celije[celija]);
+              }
+              else
+              {
+                $(this).html(slova[i+1]).css("background-color", boje[i+1]);
+                celije[celija] = slova[i+1];
+                console.log("Sadrzaj celije " + celija + " jest " + celije[celija]);
+              }
+              break;
+            }
+          }
+          console.log("Promijenio slovo!");
+        }
+      }
+
+      function Pokusaj()
+      {
+        console.log("U fji Pokusaj.");
+        attempt = celije.join("");
+        console.log(attempt);
+        $.ajax(
+          {
+              url: "http://rp2.studenti.math.hr/~zbujanov/dz4/guess.php",
+              data:
+              {
+                attempt: attempt,
+                id: id
+              },
+              dataType: "json",
+              success: function(data)
+              {
+                dobraSlova = data.nCorrectPosition;
+                krivaSlova = data.nWrongPosition;
+                console.log("Broj tocnih slova je na dobroj poziciji je" + dobraSlova);
+                console.log("Broj tocnih slova na krivoj poziciji je " + krivaSlova);
+                crtajPokusaje();
+                if(dobraSlova === duljina && krivaSlova === 0)
+                {
+                  zastavica = 1;
+                  alert("Bravo, pogodio si sva slova!");
+                  $("#novaIgra").html("<h2>Započni novu igru!</h2>")
+                  return;
+                }
+              },
+              error: function(xhr, status)
+              {
+                if(status !== null)
+                  console.log("Nešto nije u redu s Ajax upitom " + status + "!");
+              }
+          });
+      }
+
+      function crtajPokusaje()
+      {
+        console.log("U fji crtajPokusaje");
+        var tbl = $("<table></table>");
+        var tr = $("<tr></tr>");
+        var indeks = null;
+        for(var i = 0; i < duljina; i++)
+        {
+          var td = $("<td></td>");
+          //trazim koje slovo je u celija[i] kako bih mogla tu celiju obojati
+          //odgovarajucom bojom => indeks slova i boje se podudaraju
+          for(var j = 0; j < slova.length; j++)
+          {
+            if(celije[i] === slova[j])
+            {
+              indeks = j;
+              break;
+            }
+          }
+          td.html(celije[i]).prop("align", "center").css("background-color", boje[j]);
+          tr.append(td);
+          console.log("Sadrzaj celije " + i + " jest " + celije[i]);
+        }
+        tbl.append(tr);
+        $("#elti").append(tbl).append("Točnih: " + dobraSlova + ", na krivom mjestu: " + krivaSlova).append("<br />")
+                  .append("<br />");
+      }
+    </script>
+  </body>
+</html>

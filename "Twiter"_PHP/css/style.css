@@ -1,0 +1,75 @@
+body{
+  font-family: Century Gothic, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  padding: 0;
+  margin: 0;
+}
+
+/*odnosi se na sve elemente unorder list*/
+ul{
+  padding: 0;
+  margin: 0;
+}
+/*svi linkovisu narancaste boje*/
+  a:link{
+    color: #E8491D;
+    text-decoration: none;
+}
+
+/*postavljanje izgleda stranice (na koliko % stranice se nalazi tekst - maknuto od rubova radi toga)*/
+.container{
+  width: 85%;
+  margin: auto;
+  overflow: hidden;
+}
+
+/*ZAGLAVLJE*/
+/*dio gdje pise glavni naslov*/
+header{
+  background: #336666;
+  color: #CCCCCC;
+  padding-top: 30px;
+  min-height: 30px;
+  border-bottom: black 1px solid;
+}
+/*izgled linkova home, filmovi, najplaceniji glumci*/
+header a{
+  color: #CCCCCC;
+  text-decoration: none;
+  text-transform: uppercase;
+  font-size: 16px;
+}
+/*oboji narancasto i boldaj link stranice na kojoj smo trenutno*/
+header .trenutno a{
+  color: #E8491D;
+  font-weight: bold;
+}
+/*link preko kojeg prijedemo misem oboji se u narancasto i boldan je*/
+header a:hover{
+  color: #E8491D;
+  font-weight: bold;
+}
+/*izbornik/navigacija se nalazi na lijevoj strani*/
+header nav{
+  float: right;
+  margin-top: 10px;
+}
+/*elte izbornika poredaj s lijeva na desno*/
+header li{
+  float: left;
+  display: inline;
+  padding: 0 20px 0 20px;
+}
+header #branding{
+  flat:left;
+}
+ header #branding h1{
+   margin: 0;
+   float: left;
+ }
+
+ header #branding h2{
+   margin: 0;
+   float: right;
+ }

@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <title></title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.js"></script>
+    <style media="screen">
+      td, tr {border: 1px solid green;}
+      td { width: 50px; height: 50px; border-collapse: separate; font-size: 30px;}
+    </style>
+  </head>
+  <body>
+    Odaberi igru:
+    <select class="igra">
+      <option value="PRVA">PRVA</option>
+      <option value="DRUGA">DRUGA</option>
+      <option value="TRECA">TRECA</option>
+    </select>
+    <p id="tbl"></p>
+    Zasad imaš <span id="bodovi"></span> bodova! Ukupno si otvorio <span id="pogledao"></span> polja.
+    <script>
+      var igra = null;
+      //sluze za pamcenje dimenzija igre
+      var R = null, S = null;
+      //broj trajno okrenutih parova je jednako broju bodova u igri pa te dvije
+      //informacije pamtimo u var bodovi
+      var bodovi = 0;
+      //pamcenje celija na koje je kliknuto
+      var r1 = null, s1 = null, r2 = null, s2 = null;
+      //pamcenje slova
+      var slovo1 = null;
+      //broji klikove => jedan klik = prva celija, drugi klik = druga celija => reset
+      var klik = 0;
+      //ako je klik === 2, postavi zastavicu za usporedbu
+      var usporedi = 0;
+      //polje trajno otvorenih celija te broj ukupno otvorenih celija
+      var polje = [], pogledao = 0;
+
+      $(document).ready(function()
+      {
+        //reakcija na promjenu igre
+        $("select").change(Dimenzije);
+        //reakcija na klik na celiju
+        //celije su dinamicki konstruirane pa se na sljedeci nacin obraduje klik
+        $("body").on("click", "td.celija", Klik);
+      });
+
+      function Dimenzije()
+      {
+        console.log("U fji Dimenzije");
+        igra = $(this).val();
+        console.log("Promjena select-a. Odabrana igra : " + igra)
+        //saljem ajaxom serveru ime igre
+        $.ajax(
+        {
+          url: "Kol2017_zad2.php",
+          data:
+          {
+            igra: igra
+          },
+          dataType: "json",
+          success: function(data)
+          {
+            R = data.dimenzije[0];
+            S = data.dimenzije[1];
+            console.log("Dimnezije igre " + igra + " su: " + R + "x" + S);
+            crtajIgru();
+            $("#bodovi").html(bodovi);
+            $("#pogledao").html(pogledao);
+          },
+          error: function(xhr, status)
+          {
+            if(status !== null)
+              console.log("Nešto nije u redu s Ajax upitom. Status: " + status + ".");
+          }
+        });
+      }
+
+      function crtajIgru()
+      {
+        console.log("U funkciji CrtajIgru.");
+        var tbl = $("<table></table>");
+        for(var i = 0; i < R; i++)
+        {
+          var tr = $("<tr></tr>");
+          for(var j = 0; j < S; j++)
+          {
+            var td = $("<td></td>");
+            //celiji postavljam klasu i id kako bih mogla detektirati na koju je kliknuto
+            //postavljam i boju slova te da su slova u centru celije
+            td.prop("class", "celija").prop("id", "c" + i + j).prop("align", "center").css("color", "red");
+            tr.append(td);
+          }
+          tbl.append(tr);
+        }
+        $("#tbl").html(tbl);
+        console.log("Nacrtao tablicu, izlazim iz fje.");
+      }
+
+      function Klik()
+      {
+        //klik na prvu celiju => otvaranje prvog slova
+        if(klik === 0)
+        {
+          console.log("U fji Klik. klik = " + klik);
+          //dohvacam celiju na koju je kliknuto
+          var id = $(this).prop("id");
+          console.log("id kliknute celije je " + id);
+          r1 = Number(id[1]);
+          s1 = Number(id[2]);
+          console.log("Kliknuta celija: (" + (r1+1) + "," + (s1+1) + ")");
+          //provjeri je li kliknuta celija vec otvorena
+          for(var i = 0; i < polje.length; i++)
+          {
+            if(polje[i][0] === r1 && polje[i][1] === s1)
+            {
+              console.log("Odabrao si vec otvorenu celiju. Pokusaj ponovno!");
+              return;
+            }
+          }
+          //saljem serveru upit za slovo na celiji
+          $.ajax(
+          {
+            url: "Kol2017_zad2.php",
+            data:
+            {
+              igra: igra,
+              r: r1,
+              s: s1
+            },
+            dataType: "json",
+            success: function(data)
+            {
+              slovo1 = data.slovo;
+              console.log("Slovo na kliknutoj celiji je " + slovo1 + ".");
+              //upisujem slovo na celiju
+              $("#c" + r1 + s1).html(slovo1).css("background-color", "gray");
+            },
+            error: function(xhr, status)
+            {
+              if(status !== null)
+                console.log("Nešto nije u redu s Ajax upitom. Status: " + status + ".");
+            }
+          });
+          pogledao++;
+          $("#pogledao").html(pogledao);
+          klik++;
+          //vise nista ne radi, izadi iz fje i cekaj drugi klik
+          return;
+        }
+        //klik na drugu celiju => otvaranje drugog slova
+        if(klik === 1)
+        {
+          console.log("U fji Klik. klik = " + klik);
+          //dohvacam celiju na koju je kliknuto
+          var id = $(this).prop("id");
+          console.log("id kliknute celije je " + id);
+          r2 = Number(id[1]);
+          s2 = Number(id[2]);
+          console.log("Kliknuta celija: (" + (r2+1) + "," + (s2+1) + ")");
+          //ako su obje celije iste -> ne radi nista sa ovim pokusajem
+          //nego daj korisniku mogucnost da ponovno klikne na drugu celiju
+          if(r2 === r1 && s2 === s1)
+          {
+            console.log("Otvorio iste celije.");
+            return;
+          }
+          //provjeri je li kliknuta celija vec otvorena
+          for(var i = 0; i < polje.length; i++)
+          {
+            if(polje[i][0] === r1 && polje[i][1] === s1)
+            {
+              console.log("Odabrao si vec otvorenu celiju. Pokusaj ponovno!");
+              return;
+            }
+          }
+          //ako su celije razlicite, podizem zastavicu za usporedbu i doznajem slovo
+          usporedi = 1;
+          pogledao++;
+          $("#pogledao").html(pogledao);
+          //saljem serveru upit za slovo na celiji
+          $.ajax(
+          {
+            url: "Kol2017_zad2.php",
+            data:
+            {
+              igra: igra,
+              r: r2,
+              s: s2
+            },
+            dataType: "json",
+            success: function(data)
+            {
+              slovo2 = data.slovo;
+              console.log("Slovo na kliknutoj celiji je " + slovo2 + ".");
+              //upisujem slovo na celiju
+              $("#c" + r2 + s2).html(slovo2).css("background-color", "gray");
+            },
+            error: function(xhr, status)
+            {
+              if(status !== null)
+                console.log("Nešto nije u redu s Ajax upitom. Status: " + status + ".");
+            }
+          });
+        }
+        //ako smo oba puta kliknuli -> imamo dva slova i treba ih usporediti
+        if(usporedi === 1)
+        {
+          //daj vremena serveru da dobije slovo na drugoj celiji
+          //iz nekog razloga server je malo sporije vracao slovo2 pa bez ove linije
+          //koda ode u funckiju usporedi slova bez da je vec dohvatio slovo2
+          //i onda vraca gresku (posto slovo2 jos nije definirano)
+          setTimeout(usporediSlova, 10);
+        }
+      }
+
+      function usporediSlova()
+      {
+        //reset brojaca
+        klik = 0;
+        console.log("Otkrivena dva slova => provjera!");
+        if(slovo1 === slovo2)
+        {
+          console.log("Slova su ista!");
+          polje.push([r1, s1]);
+          polje.push([r2, s2]);
+          bodovi++;
+          console.log("Otkrio si " + bodovi + " para do sada.");
+          $("#bodovi").html(bodovi);
+          //jesu li otkriveni svi parovi?
+          //broj parova je umnozak dimenzija kroz 2
+          if((R*S)/2 === bodovi)
+          {
+            alert("Bravo, otkrio si sve parove u " + pogledao + " koraka!");
+            return;
+          }
+          //console.log("Prva celija para: r = " + polje[0][0] + " s = " + polje[0][1]);
+        }
+        //slova nisu ista
+        else
+        {
+          console.log("Slova nisu ista!");
+          //nakon sekunde zatvori celije
+          setTimeout(zatvoriCelije, 1000);
+        }
+      }
+
+      function zatvoriCelije()
+      {
+        console.log("Prosla je sekunda => zatvaram celije!");
+        $("#c" + r1 + s1).html(" ").css("background-color", "white");
+        $("#c" + r2 + s2).html(" ").css("background-color", "white");
+      }
+    </script>
+  </body>
+</html>
